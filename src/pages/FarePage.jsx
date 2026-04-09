@@ -1,6 +1,13 @@
+// Name: Natalie Kanyuchi
+// Student ID number: 23198994
+// Description: fare estimation page
+//calculates trip costs based on picup location and destination location + car type
+//shows estimated fare
+
 import { useState } from "react";
 
 function FarePage() {
+  //manage state for pickup, destination and selected vehicle type
   const [form, setForm] = useState({
     pickup: "",
     destination: "",
@@ -9,51 +16,63 @@ function FarePage() {
 
   const [fare, setFare] = useState(null);
   const [message, setMessage] = useState("");
-
+//assign numeric values to region to calculate distance based on zone difference
   const suburbZones = {
-    "Auckland Central": 1,
-    "North Auckland": 2,
-    "South Auckland": 3,
-    "East Auckland": 4,
-    "West Auckland": 5,
-    "Manukau": 6,
-    "Papakura": 7,
-    "Takanini": 8
-  };
+    "Pukekohe": 1,
+    "Papakura":1,
+    "Takaanini": 1,
+    "Te Mahia":2,
+    "Manurewa": 2,
+    "Homai":2,
+    "Puhinui":2,
+    "Papatoetoe":3,
+    "Middlemore":4,
+    "Otahuhu": 5,
+    "Penrose":5,
+    "Ellerslie":6,
+    "Greenlane":7,
+    "Remuera": 8,
+    "Newmarket": 9,
+    "Parnell":10,
+    "Waitemata": 11,
 
+
+  };
+//price multiplies based on the selected vehicle type
   const carTypeMultiplier = {
     Standard: 1,
     Premium: 1.35,
     Van: 1.6
   };
 
+  //update form state on input change
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value });
   }
-
+//hand fare calculation logic
   function calculateFare(e) {
     e.preventDefault();
-
+//ensure user has selected both locations
     if (!form.pickup || !form.destination) {
       setMessage("Please select both pickup and destination suburbs.");
       setFare(null);
       return;
     }
-
+//prevent calculation if pickup and destination are the same
     if (form.pickup === form.destination) {
       setMessage("Pickup and destination cannot be the same.");
       setFare(null);
       return;
     }
-
+//fetch zone numbers for the selected suburbs
     const pickupZone = suburbZones[form.pickup];
     const destinationZone = suburbZones[form.destination];
-
+//calculation logic = base fee + (zone difference * rate) * vehicle multiplier
     const zoneDifference = Math.abs(pickupZone - destinationZone);
     const baseFare = 12;
     const distanceFare = zoneDifference * 4.5;
     const estimatedFare = (baseFare + distanceFare) * carTypeMultiplier[form.carType];
-
+//store final fare rounded to two decimal places
     setFare(estimatedFare.toFixed(2));
     setMessage("Estimated fare calculated successfully.");
   }
@@ -64,32 +83,55 @@ function FarePage() {
       <p className="section-subtitle">
         Estimate your trip cost before booking.
       </p>
-
+{/*input form for fare parameters*/}
       <form className="fare-form" onSubmit={calculateFare}>
         <select name="pickup" value={form.pickup} onChange={handleChange}>
           <option value="">Select pickup suburb</option>
-          <option value="Auckland Central">Auckland Central</option>
-          <option value="North Auckland">North Auckland</option>
-          <option value="South Auckland">South Auckland</option>
-          <option value="East Auckland">East Auckland</option>
-          <option value="West Auckland">West Auckland</option>
-          <option value="Manukau">Manukau</option>
+          {/*suburb option*/}
+          <option value="Pukekohe">Pukekohe</option>
           <option value="Papakura">Papakura</option>
-          <option value="Takanini">Takanini</option>
+          <option value="Takaanini">Takaanini</option>
+          <option value="Te Mahia">Te Mahia</option>
+          <option value="Manurewa">Manurewa</option>
+          <option value="Homai">Homai</option>
+          <option value="Puhinui">Puhinui</option>
+          <option value="Papatoetoe">Papatoetoe</option>
+          <option value="Middlemore">Middlemore</option>
+          <option value="Otahuhu">Otahuhu</option>
+          <option value="Penrose">Penrose</option>
+          <option value="Ellerslie">Ellerslie</option>
+          <option value="Greenlane">Greenlane</option>
+          <option value="Remuera">Remuera</option>
+          <option value="Newmarket">Newmarket</option>
+          <option value="Parnell">Parnell</option>
+          <option value="Waitemata">Waitemata</option>
+
         </select>
 
         <select name="destination" value={form.destination} onChange={handleChange}>
           <option value="">Select destination suburb</option>
-          <option value="Auckland Central">Auckland Central</option>
-          <option value="North Auckland">North Auckland</option>
-          <option value="South Auckland">South Auckland</option>
-          <option value="East Auckland">East Auckland</option>
-          <option value="West Auckland">West Auckland</option>
-          <option value="Manukau">Manukau</option>
+          {/*suburb destination option*/}
+          <option value="Pukekohe">Pukekohe</option>
           <option value="Papakura">Papakura</option>
-          <option value="Takanini">Takanini</option>
-        </select>
+          <option value="Takaanini">Takaanini</option>
+          <option value="Te Mahia">Te Mahia</option>
+          <option value="Manurewa">Manurewa</option>
+          <option value="Homai">Homai</option>
+          <option value="Puhinui">Puhinui</option>
+          <option value="Papatoetoe">Papatoetoe</option>
+          <option value="Middlemore">Middlemore</option>
+          <option value="Otahuhu">Otahuhu</option>
+          <option value="Penrose">Penrose</option>
+          <option value="Ellerslie">Ellerslie</option>
+          <option value="Greenlane">Greenlane</option>
+          <option value="Remuera">Remuera</option>
+          <option value="Newmarket">Newmarket</option>
+          <option value="Parnell">Parnell</option>
+          <option value="Waitemata">Waitemata</option>
 
+
+        </select>
+{/*vehicle type selection dropdown*/}
         <select name="carType" value={form.carType} onChange={handleChange}>
           <option value="Standard">Standard</option>
           <option value="Premium">Premium</option>
@@ -98,7 +140,7 @@ function FarePage() {
 
         <button type="submit">Estimate Fare</button>
       </form>
-
+{/*validation or status messages*/}
       {message && <div className="message-box">{message}</div>}
 
       {fare && (

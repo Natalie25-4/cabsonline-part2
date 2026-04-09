@@ -1,4 +1,8 @@
+/* makes sure that the html, body, and react root container 
+covers the full viewport height*/
+
 html, body, #root{
+  /*reset default browser spacing so that layout starts from the edge*/
   min-height: 100%;
   margin: 0;
   padding: 0;
