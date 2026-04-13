@@ -1,12 +1,14 @@
 // Name: Natalie Kanyuchi
 // Student ID number: 23198994
-// Description: tracking page for customers
-// Allows users to search bookings by phone number, view booking, update or cancel booking
+// Description: Customer booking management page.
+// This component allows customers to search bookings by phone number,
+// view booking details, update active bookings, cancel bookings,
+// and permanently delete cancelled bookings.
 
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
 
-// Format Supabase datetime into DD/MM/YYYY 11:30 AM
+// Format Supabase datetime values into DD/MM/YYYY hh:mm AM/PM
 function formatDateTime(datetime) {
   const date = new Date(datetime);
 
@@ -21,13 +23,13 @@ function formatDateTime(datetime) {
 }
 
 function TrackingPage() {
-  // State for search input, feedback messages, and retrieved booking list
+  // Search input, feedback message, booking list, and loading state
   const [search, setSearch] = useState("");
   const [message, setMessage] = useState("");
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(false);
 
-// State for the update form fields
+  // Update form fields
   const [form, setForm] = useState({
     phone: "",
     dsbname: "",
@@ -35,14 +37,15 @@ function TrackingPage() {
     time: ""
   });
 
-// Stores the ID (BRN) of the specific booking being edited
+  // Stores the BRN of the booking currently being edited
   const [selectedBrn, setSelectedBrn] = useState("");
-// Search logic: Fetches all bookings associated with a phone number
+
+  // Search for bookings using the customer's phone number
   async function handleSearch(e) {
     e.preventDefault();
 
     const phone = search.trim();
-// Validation: Ensure phone number is present and correctly formatted
+
     if (!phone) {
       setMessage("Please enter your phone number.");
       setBookings([]);
@@ -57,7 +60,7 @@ function TrackingPage() {
 
     setLoading(true);
     setMessage("");
-// Query Supabase for bookings matching the phone number
+
     const { data, error } = await supabase
       .from("bookings")
       .select("*")
@@ -83,8 +86,14 @@ function TrackingPage() {
     setMessage(`Found ${data.length} booking(s) for ${phone}.`);
     setLoading(false);
   }
-// Populates the update form with existing data from the selected booking
+
+  // Load an existing booking into the update form
   function startUpdate(booking) {
+    if (booking.status === "cancelled") {
+      setMessage("Cancelled bookings cannot be edited.");
+      return;
+    }
+
     const dateObject = new Date(booking.pickup_datetime);
     const date = dateObject.toISOString().slice(0, 10);
     const time = dateObject.toTimeString().slice(0, 5);
@@ -97,11 +106,13 @@ function TrackingPage() {
       time
     });
   }
-// Handle input changes for the update form
+
+  // Update local form state when fields change
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value });
   }
-// Sends updated booking data to Supabase
+
+  // Save updated booking details to Supabase
   async function handleUpdate(e) {
     e.preventDefault();
 
@@ -110,16 +121,23 @@ function TrackingPage() {
       return;
     }
 
+    const selectedBooking = bookings.find((booking) => booking.brn === selectedBrn);
+
+    if (selectedBooking && selectedBooking.status === "cancelled") {
+      setMessage("Cancelled bookings cannot be edited.");
+      return;
+    }
+
     if (!form.phone || !form.dsbname || !form.date || !form.time) {
       setMessage("Please fill in all update fields.");
       return;
     }
-// Validation for update fields
+
     if (!/^\d{10,12}$/.test(form.phone)) {
       setMessage("Phone number must be 10–12 digits.");
       return;
     }
-    //prevent from setting past date and time
+
     const pickupDateTime = new Date(`${form.date}T${form.time}`);
     if (pickupDateTime < new Date()) {
       setMessage("Pickup date and time cannot be in the past.");
@@ -142,7 +160,7 @@ function TrackingPage() {
       setMessage("Failed to update booking.");
       return;
     }
-// Sync local state: Update the specific booking in the UI list
+
     setBookings((prevBookings) =>
       prevBookings.map((booking) =>
         booking.brn === selectedBrn
@@ -157,7 +175,7 @@ function TrackingPage() {
     );
 
     setMessage(`Booking ${selectedBrn} has been updated successfully.`);
-    setSelectedBrn(""); //clost update form
+    setSelectedBrn("");
     setForm({
       phone: "",
       dsbname: "",
@@ -165,9 +183,9 @@ function TrackingPage() {
       time: ""
     });
   }
-// Logic to cancel a booking and release the driver (if assigned)
+
+  // Cancel a booking and release its assigned driver back to available
   async function handleCancel(brn, driverId) {
-    // Update booking status to cancelled
     const { error: bookingError } = await supabase
       .from("bookings")
       .update({
@@ -182,7 +200,7 @@ function TrackingPage() {
       setMessage("Failed to cancel booking.");
       return;
     }
-// If a driver was assigned, make them available again in the drivers table
+
     if (driverId) {
       const { error: driverError } = await supabase
         .from("drivers")
@@ -195,7 +213,7 @@ function TrackingPage() {
         return;
       }
     }
-// Update local state to reflect cancellation in the UI
+
     setBookings((prevBookings) =>
       prevBookings.map((booking) =>
         booking.brn === brn
@@ -209,16 +227,57 @@ function TrackingPage() {
       )
     );
 
+    if (selectedBrn === brn) {
+      setSelectedBrn("");
+      setForm({
+        phone: "",
+        dsbname: "",
+        date: "",
+        time: ""
+      });
+    }
+
     setMessage(`Booking ${brn} has been cancelled.`);
+  }
+
+  // Permanently delete a cancelled booking from Supabase and from the UI
+  async function handleDelete(brn) {
+    const { error } = await supabase
+      .from("bookings")
+      .delete()
+      .eq("brn", brn);
+
+    if (error) {
+      console.error(error);
+      setMessage("Failed to delete booking.");
+      return;
+    }
+
+    setBookings((prevBookings) =>
+      prevBookings.filter((booking) => booking.brn !== brn)
+    );
+
+    if (selectedBrn === brn) {
+      setSelectedBrn("");
+      setForm({
+        phone: "",
+        dsbname: "",
+        date: "",
+        time: ""
+      });
+    }
+
+    setMessage(`Booking ${brn} has been deleted.`);
   }
 
   return (
     <div className="page-card">
       <h2>My Booking</h2>
       <p className="section-subtitle">
-        Enter your phone number to track, update, or cancel your bookings.
+        Enter your phone number to track, update, or manage your bookings.
       </p>
-{/* Search Bar */}
+
+      {/* Search form */}
       <form className="search-form" onSubmit={handleSearch}>
         <input
           type="text"
@@ -231,14 +290,17 @@ function TrackingPage() {
         </button>
       </form>
 
+      {/* Empty state before or after unsuccessful search */}
       {bookings.length === 0 && (
         <div className="empty-state">
           <p>Enter your phone number to view your bookings.</p>
         </div>
       )}
-{/* Feedback Messages */}
+
+      {/* Feedback message */}
       {message && <div className="message-box">{message}</div>}
-{/* Booking List Display */}
+
+      {/* Display each booking found for the phone number */}
       {bookings.map((booking) => (
         <div key={booking.brn} className="admin-section">
           <h3>Booking Details ({booking.brn})</h3>
@@ -258,6 +320,7 @@ function TrackingPage() {
               type="button"
               className="action-btn"
               onClick={() => startUpdate(booking)}
+              disabled={booking.status === "cancelled"}
             >
               Edit Booking
             </button>
@@ -270,10 +333,21 @@ function TrackingPage() {
             >
               {booking.status === "cancelled" ? "Cancelled" : "Cancel Booking"}
             </button>
+
+            {booking.status === "cancelled" && (
+              <button
+                type="button"
+                className="delete-btn"
+                onClick={() => handleDelete(booking.brn)}
+              >
+                Delete Booking
+              </button>
+            )}
           </div>
         </div>
       ))}
-{/* Conditional Update Form (Appears when 'Edit' is clicked) */}
+
+      {/* Update form appears only when a booking is selected for editing */}
       {selectedBrn && (
         <div className="admin-section">
           <h3>Update Booking ({selectedBrn})</h3>
