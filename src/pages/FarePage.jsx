@@ -1,79 +1,59 @@
 // Name: Natalie Kanyuchi
 // Student ID number: 23198994
-// Description: fare estimation page
-//calculates trip costs based on picup location and destination location + car type
-//shows estimated fare
+// Description: Fare estimation page for the CabsOnline application.
+// This component allows users to select a pickup suburb, destination suburb,
+// and vehicle type, then calculates and displays an estimated fare.
 
 import { useState } from "react";
+import { suburbs } from "../components/Suburbs";
+import { calculateEstimatedFare } from "../components/FareCalculator";
 
 function FarePage() {
-  //manage state for pickup, destination and selected vehicle type
+  // Store the selected trip details
   const [form, setForm] = useState({
     pickup: "",
     destination: "",
     carType: "Standard"
   });
 
+  // Store the calculated fare and user feedback message
   const [fare, setFare] = useState(null);
   const [message, setMessage] = useState("");
-//assign numeric values to region to calculate distance based on zone difference
-  const suburbZones = {
-    "Pukekohe": 1,
-    "Papakura":1,
-    "Takaanini": 1,
-    "Te Mahia":2,
-    "Manurewa": 2,
-    "Homai":2,
-    "Puhinui":2,
-    "Papatoetoe":3,
-    "Middlemore":4,
-    "Otahuhu": 5,
-    "Penrose":5,
-    "Ellerslie":6,
-    "Greenlane":7,
-    "Remuera": 8,
-    "Newmarket": 9,
-    "Parnell":10,
-    "Waitemata": 11,
 
-
-  };
-//price multiplies based on the selected vehicle type
-  const carTypeMultiplier = {
-    Standard: 1,
-    Premium: 1.35,
-    Van: 1.6
-  };
-
-  //update form state on input change
+  // Update form state when inputs change
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value });
   }
-//hand fare calculation logic
-  function calculateFare(e) {
+
+  // Calculate fare based on selected suburbs and vehicle type
+  function handleFareSubmit(e) {
     e.preventDefault();
-//ensure user has selected both locations
+
     if (!form.pickup || !form.destination) {
       setMessage("Please select both pickup and destination suburbs.");
       setFare(null);
       return;
     }
-//prevent calculation if pickup and destination are the same
+
     if (form.pickup === form.destination) {
       setMessage("Pickup and destination cannot be the same.");
       setFare(null);
       return;
     }
-//fetch zone numbers for the selected suburbs
-    const pickupZone = suburbZones[form.pickup];
-    const destinationZone = suburbZones[form.destination];
-//calculation logic = base fee + (zone difference * rate) * vehicle multiplier
-    const zoneDifference = Math.abs(pickupZone - destinationZone);
-    const baseFare = 12;
-    const distanceFare = zoneDifference * 4.5;
-    const estimatedFare = (baseFare + distanceFare) * carTypeMultiplier[form.carType];
-//store final fare rounded to two decimal places
-    setFare(estimatedFare.toFixed(2));
+
+    const estimatedFare = calculateEstimatedFare(
+      form.pickup,
+      form.destination,
+      form.carType
+    );
+
+    if (!estimatedFare) {
+      setMessage("Unable to calculate fare for the selected trip.");
+      setFare(null);
+      return;
+    }
+
+    setFare(estimatedFare);
     setMessage("Estimated fare calculated successfully.");
   }
 
@@ -83,55 +63,26 @@ function FarePage() {
       <p className="section-subtitle">
         Estimate your trip cost before booking.
       </p>
-{/*input form for fare parameters*/}
-      <form className="fare-form" onSubmit={calculateFare}>
+
+      <form className="fare-form" onSubmit={handleFareSubmit}>
         <select name="pickup" value={form.pickup} onChange={handleChange}>
           <option value="">Select pickup suburb</option>
-          {/*suburb option*/}
-          <option value="Pukekohe">Pukekohe</option>
-          <option value="Papakura">Papakura</option>
-          <option value="Takaanini">Takaanini</option>
-          <option value="Te Mahia">Te Mahia</option>
-          <option value="Manurewa">Manurewa</option>
-          <option value="Homai">Homai</option>
-          <option value="Puhinui">Puhinui</option>
-          <option value="Papatoetoe">Papatoetoe</option>
-          <option value="Middlemore">Middlemore</option>
-          <option value="Otahuhu">Otahuhu</option>
-          <option value="Penrose">Penrose</option>
-          <option value="Ellerslie">Ellerslie</option>
-          <option value="Greenlane">Greenlane</option>
-          <option value="Remuera">Remuera</option>
-          <option value="Newmarket">Newmarket</option>
-          <option value="Parnell">Parnell</option>
-          <option value="Waitemata">Waitemata</option>
-
+          {suburbs.map((suburb) => (
+            <option key={suburb} value={suburb}>
+              {suburb}
+            </option>
+          ))}
         </select>
 
         <select name="destination" value={form.destination} onChange={handleChange}>
           <option value="">Select destination suburb</option>
-          {/*suburb destination option*/}
-          <option value="Pukekohe">Pukekohe</option>
-          <option value="Papakura">Papakura</option>
-          <option value="Takaanini">Takaanini</option>
-          <option value="Te Mahia">Te Mahia</option>
-          <option value="Manurewa">Manurewa</option>
-          <option value="Homai">Homai</option>
-          <option value="Puhinui">Puhinui</option>
-          <option value="Papatoetoe">Papatoetoe</option>
-          <option value="Middlemore">Middlemore</option>
-          <option value="Otahuhu">Otahuhu</option>
-          <option value="Penrose">Penrose</option>
-          <option value="Ellerslie">Ellerslie</option>
-          <option value="Greenlane">Greenlane</option>
-          <option value="Remuera">Remuera</option>
-          <option value="Newmarket">Newmarket</option>
-          <option value="Parnell">Parnell</option>
-          <option value="Waitemata">Waitemata</option>
-
-
+          {suburbs.map((suburb) => (
+            <option key={suburb} value={suburb}>
+              {suburb}
+            </option>
+          ))}
         </select>
-{/*vehicle type selection dropdown*/}
+
         <select name="carType" value={form.carType} onChange={handleChange}>
           <option value="Standard">Standard</option>
           <option value="Premium">Premium</option>
@@ -140,7 +91,7 @@ function FarePage() {
 
         <button type="submit">Estimate Fare</button>
       </form>
-{/*validation or status messages*/}
+
       {message && <div className="message-box">{message}</div>}
 
       {fare && (

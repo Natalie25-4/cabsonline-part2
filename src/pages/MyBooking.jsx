@@ -1,12 +1,13 @@
 // Name: Natalie Kanyuchi
 // Student ID number: 23198994
 // Description: Customer booking management page.
-// This component allows customers to search bookings by phone number,
+// Allows customers to search bookings by phone number,
 // view booking details, update active bookings, cancel bookings,
 // and permanently delete cancelled bookings.
 
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
+import { suburbs } from "../components/Suburbs";
 
 // Format Supabase datetime values into DD/MM/YYYY hh:mm AM/PM
 function formatDateTime(datetime) {
@@ -22,14 +23,14 @@ function formatDateTime(datetime) {
   return `${formattedDate} ${formattedTime}`;
 }
 
-function TrackingPage() {
-  // Search input, feedback message, booking list, and loading state
+function MyBooking() {
+  // Search input, message, booking results, and loading state
   const [search, setSearch] = useState("");
   const [message, setMessage] = useState("");
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Update form fields
+  // Update form values
   const [form, setForm] = useState({
     phone: "",
     dsbname: "",
@@ -37,10 +38,10 @@ function TrackingPage() {
     time: ""
   });
 
-  // Stores the BRN of the booking currently being edited
+  // BRN of the booking currently being edited
   const [selectedBrn, setSelectedBrn] = useState("");
 
-  // Search for bookings using the customer's phone number
+  // Search bookings using phone number
   async function handleSearch(e) {
     e.preventDefault();
 
@@ -87,7 +88,7 @@ function TrackingPage() {
     setLoading(false);
   }
 
-  // Load an existing booking into the update form
+  // Load selected booking details into the update form
   function startUpdate(booking) {
     if (booking.status === "cancelled") {
       setMessage("Cancelled bookings cannot be edited.");
@@ -107,12 +108,12 @@ function TrackingPage() {
     });
   }
 
-  // Update local form state when fields change
+  // Update form field state
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value });
   }
 
-  // Save updated booking details to Supabase
+  // Save booking updates to Supabase
   async function handleUpdate(e) {
     e.preventDefault();
 
@@ -184,7 +185,7 @@ function TrackingPage() {
     });
   }
 
-  // Cancel a booking and release its assigned driver back to available
+  // Cancel booking and release assigned driver
   async function handleCancel(brn, driverId) {
     const { error: bookingError } = await supabase
       .from("bookings")
@@ -240,7 +241,7 @@ function TrackingPage() {
     setMessage(`Booking ${brn} has been cancelled.`);
   }
 
-  // Permanently delete a cancelled booking from Supabase and from the UI
+  // Permanently delete a cancelled booking
   async function handleDelete(brn) {
     const { error } = await supabase
       .from("bookings")
@@ -277,7 +278,6 @@ function TrackingPage() {
         Enter your phone number to track, update, or manage your bookings.
       </p>
 
-      {/* Search form */}
       <form className="search-form" onSubmit={handleSearch}>
         <input
           type="text"
@@ -290,17 +290,14 @@ function TrackingPage() {
         </button>
       </form>
 
-      {/* Empty state before or after unsuccessful search */}
       {bookings.length === 0 && (
         <div className="empty-state">
           <p>Enter your phone number to view your bookings.</p>
         </div>
       )}
 
-      {/* Feedback message */}
       {message && <div className="message-box">{message}</div>}
 
-      {/* Display each booking found for the phone number */}
       {bookings.map((booking) => (
         <div key={booking.brn} className="admin-section">
           <h3>Booking Details ({booking.brn})</h3>
@@ -313,6 +310,8 @@ function TrackingPage() {
             <div><strong>Pickup Time:</strong> {formatDateTime(booking.pickup_datetime)}</div>
             <div><strong>Status:</strong> {booking.status}</div>
             <div><strong>Driver:</strong> {booking.driver_name || "Not assigned yet"}</div>
+            <div><strong>Fare:</strong> {booking.fare_amount ? `NZD $${Number(booking.fare_amount).toFixed(2)}` : "Not available"}</div>
+            <div><strong>Payment:</strong> {booking.payment_status || "unpaid"}</div>
           </div>
 
           <div className="button-row">
@@ -347,7 +346,6 @@ function TrackingPage() {
         </div>
       ))}
 
-      {/* Update form appears only when a booking is selected for editing */}
       {selectedBrn && (
         <div className="admin-section">
           <h3>Update Booking ({selectedBrn})</h3>
@@ -361,13 +359,18 @@ function TrackingPage() {
               onChange={handleChange}
             />
 
-            <input
-              type="text"
+            <select
               name="dsbname"
-              placeholder="Destination Suburb"
               value={form.dsbname}
               onChange={handleChange}
-            />
+            >
+              <option value="">Select destination suburb</option>
+              {suburbs.map((suburb) => (
+                <option key={suburb} value={suburb}>
+                  {suburb}
+                </option>
+              ))}
+            </select>
 
             <input
               type="date"
@@ -395,4 +398,4 @@ function TrackingPage() {
   );
 }
 
-export default TrackingPage;
+export default MyBooking;

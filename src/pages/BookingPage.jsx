@@ -1,14 +1,17 @@
-//Name: Natalie Kanyuchi
-//Student ID number: 23198994
-//desciption: booking page component. allows users to enter booking details
-//validates input and generates a booking reference number and stores booking data in supabase
-
+// Name: Natalie Kanyuchi
+// Student ID number: 23198994
+// Description: Booking page component.
+// Allows users to enter booking details, validates input,
+// generates a booking reference number, calculates fare,
+// and stores booking data in Supabase.
 
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
+import { suburbs } from "../components/Suburbs";
+import { calculateEstimatedFare } from "../components/FareCalculator";
 
 function BookingPage() {
-  //initialise state for form fields
+  // Store form values for a new booking
   const [form, setForm] = useState({
     cname: "",
     phone: "",
@@ -17,33 +20,56 @@ function BookingPage() {
     sbname: "",
     dsbname: "",
     date: "",
-    time: ""
+    time: "",
+    carType: "Standard"
   });
 
+  // Store feedback message and loading state
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
-  function handleChange(e) { //update form fields in state when user types
+  // Update form state when user changes an input field
+  function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value });
   }
 
+  // Handle booking submission and save the record in Supabase
   async function handleSubmit(e) {
     e.preventDefault();
 
-    if (!/^\d{10,12}$/.test(form.phone)) { //validate phone number length (10-12 digits)
+    if (!/^\d{10,12}$/.test(form.phone)) {
       setMessage("Phone number must be 10–12 digits.");
       return;
     }
 
-    //ensure all mandatory fields are completed/filled
-    if (!form.cname || !form.snumber || !form.stname || !form.date || !form.time) {
+    if (
+      !form.cname ||
+      !form.snumber ||
+      !form.stname ||
+      !form.sbname ||
+      !form.dsbname ||
+      !form.date ||
+      !form.time
+    ) {
       setMessage("Please fill in all required fields.");
       return;
     }
-   //prevent bookings from past dates and time
+
+    if (form.sbname === form.dsbname) {
+      setMessage("Pickup and destination suburbs cannot be the same.");
+      return;
+    }
+
     const pickupDateTime = new Date(`${form.date}T${form.time}`);
     if (pickupDateTime < new Date()) {
       setMessage("Pickup date and time cannot be in the past.");
+      return;
+    }
+
+    const fareAmount = calculateEstimatedFare(form.sbname, form.dsbname, form.carType);
+
+    if (!fareAmount) {
+      setMessage("Unable to calculate fare for the selected trip.");
       return;
     }
 
@@ -51,7 +77,7 @@ function BookingPage() {
     setMessage("");
 
     try {
-      // fetch most recent booking to determine the next booking reference number
+      // Get the most recent BRN to generate the next booking reference number
       const { data: existingBookings, error: fetchError } = await supabase
         .from("bookings")
         .select("brn")
@@ -59,23 +85,24 @@ function BookingPage() {
         .limit(1);
 
       if (fetchError) {
-        setMessage("Failed to generate booking reference.");
+        console.error("Fetch BRN error:", fetchError);
+        setMessage(`Failed to generate booking reference: ${fetchError.message}`);
         setLoading(false);
         return;
       }
-//increment the numeric number of the latest BRN or start at number 1
+
       let nextNumber = 1;
 
       if (existingBookings && existingBookings.length > 0) {
-        const latestBrn = existingBookings[0].brn;
-        const numericPart = parseInt(latestBrn.replace("BRN", ""), 10);
+        const latestBrn = existingBookings[0]?.brn || "BRN00000";
+        const numericPart = parseInt(latestBrn.replace("BRN", ""), 10) || 0;
         nextNumber = numericPart + 1;
       }
-//format the new BRN with leadding zeros e.g BRN00001
+
       const brn = "BRN" + String(nextNumber).padStart(5, "0");
-//combine date and time for database timestamp
       const pickup_datetime = `${form.date} ${form.time}:00`;
-//insert the new booking record into the supabase database table
+
+      // Insert the booking into the bookings table
       const { error: insertError } = await supabase.from("bookings").insert([
         {
           brn,
@@ -88,28 +115,36 @@ function BookingPage() {
           pickup_datetime,
           status: "unassigned",
           driver_id: null,
-          driver_name: null
+          driver_name: null,
+          fare_amount: fareAmount,
+          payment_status: "unpaid",
+          payment_method: null
         }
       ]);
 
       if (insertError) {
-        setMessage("Failed to create booking.");
+        console.error("Supabase insert error:", insertError);
+        setMessage(`Failed to create booking: ${insertError.message}`);
         setLoading(false);
         return;
       }
 
-      //show success message with formatted booking details
       const formattedDate = new Date(form.date).toLocaleDateString("en-GB");
-      const formattedTime = form.time.slice(0, 5);
+      const formattedTime = new Date(`${form.date}T${form.time}`).toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true
+      });
 
-      //show message after booking has been made
       setMessage(
         `Thank you for your booking!
-         Booking reference number: ${brn}
-         Pickup time: ${formattedTime}
-         Pickup date: ${formattedDate}`
+Booking reference number: ${brn}
+Pickup time: ${formattedTime}
+Pickup date: ${formattedDate}
+Estimated fare: NZD $${Number(fareAmount).toFixed(2)}`
       );
-//clear the form field after booking has been made
+
+      // Reset form after successful booking
       setForm({
         cname: "",
         phone: "",
@@ -118,11 +153,12 @@ function BookingPage() {
         sbname: "",
         dsbname: "",
         date: "",
-        time: ""
+        time: "",
+        carType: "Standard"
       });
     } catch (error) {
-      console.error(error);
-      setMessage("Something went wrong while creating the booking.");
+      console.error("Booking creation error:", error);
+      setMessage(`Something went wrong while creating the booking: ${error.message}`);
     }
 
     setLoading(false);
@@ -164,19 +200,29 @@ function BookingPage() {
           onChange={handleChange}
         />
 
-        <input
-          name="sbname"
-          placeholder="Suburb"
-          value={form.sbname}
-          onChange={handleChange}
-        />
+        <select name="sbname" value={form.sbname} onChange={handleChange}>
+          <option value="">Select pickup suburb</option>
+          {suburbs.map((suburb) => (
+            <option key={suburb} value={suburb}>
+              {suburb}
+            </option>
+          ))}
+        </select>
 
-        <input
-          name="dsbname"
-          placeholder="Destination Suburb"
-          value={form.dsbname}
-          onChange={handleChange}
-        />
+        <select name="dsbname" value={form.dsbname} onChange={handleChange}>
+          <option value="">Select destination suburb</option>
+          {suburbs.map((suburb) => (
+            <option key={suburb} value={suburb}>
+              {suburb}
+            </option>
+          ))}
+        </select>
+
+        <select name="carType" value={form.carType} onChange={handleChange}>
+          <option value="Standard">Standard</option>
+          <option value="Premium">Premium</option>
+          <option value="Van">Van</option>
+        </select>
 
         <input
           type="date"

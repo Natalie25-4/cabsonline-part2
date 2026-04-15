@@ -33,6 +33,11 @@ function Navbar() {
         <NavLink to="/admin" className="nav-link">
           Admin
         </NavLink>
+
+        {/* Link to the payment page for payment simulation*/}
+        <NavLink to="/payment" className="nav-link">
+          Payment
+        </NavLink>
       </div>
     </nav>
   );
