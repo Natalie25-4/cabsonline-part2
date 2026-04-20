@@ -27,7 +27,7 @@ export const suburbs=[
 export const suburbZones ={
   Pukekohe: 1,
   Papakura: 1,
-  Takanini: 1,
+  Takaanini: 1,
   "Te Mahia": 2,
   Manurewa: 2,
   Homai: 2,
