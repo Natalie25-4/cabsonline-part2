@@ -30,13 +30,13 @@ function Navbar() {
         </NavLink>
 
         {/* Link to admin dashboard for managing bookings and assigning drivers */}
-        <NavLink to="/admin" className="nav-link">
-          Admin
+        <NavLink to="/payment" className="nav-link">
+          Payment
         </NavLink>
 
         {/* Link to the payment page for payment simulation*/}
-        <NavLink to="/payment" className="nav-link">
-          Payment
+        <NavLink to="/admin" className="nav-link">
+          Admin
         </NavLink>
       </div>
     </nav>
